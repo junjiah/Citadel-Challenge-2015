@@ -6,6 +6,15 @@
 
 #define DB 0
 
+struct Assignment
+{
+    CarCtl *car;
+    int passenger_id;
+    Route route;
+    Assignment(CarCtl *arg_car, int arg_passenger_id, Route arg_route) :
+    car(arg_car), passenger_id(arg_passenger_id), route(arg_route) { }
+};
+
 CarDispatcher::CarDispatcher(
     std::vector<IntersectionInfo> intersections,
     std::vector<RoadInfo> roads)
@@ -42,11 +51,17 @@ void CarDispatcher::onTurn(
     if (cars_at_intersections.empty())
     {
         return;
+    } 
+    else
+    {
+        if (DB)
+            std::cin.get();
     }
 
     // process loaded cars to next intersection,
     // otherwise record its position
     std::unordered_map<int, std::vector<CarCtl *> > positions;
+    std::vector<CarCtl *> unassigned_cars;
     for (auto && car : cars_at_intersections)
     {
         if (car.passenger_id != -1)
@@ -87,37 +102,45 @@ void CarDispatcher::onTurn(
         }
     }
 
-    // for each passenger, call nearest vehicle
-    std::unordered_set<int> assigned_cars;
+    // record remaining unassigned cars
+    for (auto kv : positions)
+        for (auto car : kv.second)
+            unassigned_cars.push_back(car);
 
-    for (const auto &p : all_requests)
+    // sort assignment (car and 
+    // passenger request by distances
+    std::vector<Assignment> assignments;
+    std::unordered_set<int> assigned_car_ids, assigned_passenger_ids;
+    for (auto car : unassigned_cars)
     {
-        Route best_route(INT_MAX);
-        CarCtl *nearest_car = NULL;
-        for (auto && car : cars_at_intersections)
+        for (const auto &p : all_requests)
         {
-            // only process empty and unassigned car
-            if (car.passenger_id != -1 ||
-                    assigned_cars.find(car.car_id) != assigned_cars.end())
-                continue;
-
-            Route r = graph->find_route(car.intersection_id,
-                                        p.src_intersection_id);
-            if (r.dist < best_route.dist)
-            {
-                best_route = r;
-                nearest_car = &car;
-            }
+            auto a = Assignment(car,
+                                p.passenger_id,
+                                graph->find_route(car->intersection_id,
+                                                  p.src_intersection_id));
+            assignments.push_back(a);
         }
-        // exit if no available cars, otherwise
-        // let nearest car approach the passenger
-        if (nearest_car == NULL)
-            break;
-        else
+    }
+    std::sort(assignments.begin(),
+              assignments.end(),
+              [](Assignment a, Assignment b)
+    {
+        return a.route.dist < b.route.dist;
+    });
+
+    // process assignments, assign cars to nearest passenger
+    for (auto&& a : assignments)
+    {
+        // only process unassigned car and passenger
+        if (assigned_car_ids.find(a.car->car_id) ==
+                assigned_car_ids.end() &&
+                assigned_passenger_ids.find(a.passenger_id) ==
+                assigned_passenger_ids.end())
         {
-            assigned_cars.insert(nearest_car->car_id);
-            int next = graph->route_advance(best_route);
-            nearest_car->intersection_id = next;
+            a.car->intersection_id = graph->route_advance(a.route);
+            assigned_car_ids.insert(a.car->car_id);
+            assigned_passenger_ids.insert(a.passenger_id);
         }
     }
 }
