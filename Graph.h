@@ -106,6 +106,11 @@ public:
         return res;
     }
 
+    /**
+     * Move forward according to the path.
+     * @param  r route info with distance and path
+     * @return   next step
+     */
     int route_advance(Route &r)
     {
         int curr = r.path.back();
@@ -121,8 +126,8 @@ public:
             r.dist -= edge->weight;
         } else
         {
-            // will reach destination in the next step,
-            //  reinit dist to infinity
+            // will reach the destination in the next step,
+            //  reinitialize dist to infinity
             r.dist = INT_MAX;
         }
         return next;

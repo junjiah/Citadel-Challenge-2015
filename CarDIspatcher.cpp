@@ -31,13 +31,14 @@ void CarDispatcher::onTurn(
                         passenger_requests.begin(),
                         passenger_requests.end());
 
-    if (DB)
+    if (DB) // DEBUG print
     {
         printf("car num: %lu, passenger num: %lu\n",
                cars_at_intersections.size(),
                all_requests.size());
     }
 
+    // no controllable cars
     if (cars_at_intersections.empty())
     {
         return;
