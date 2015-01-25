@@ -56,7 +56,7 @@ void CarDispatcher::onTurn(
     {
         // update congestion info
         graph->car_arrived(car.intersection_id);
-        
+
         if (car.passenger_id != -1)
         {
             Route &r = car_route[car.car_id];
@@ -117,16 +117,19 @@ void CarDispatcher::onTurn(
         }
     }
 
+    auto captured_graph = graph;
     std::sort(assignments.begin(),
               assignments.end(),
-              [graph](Assignment a, Assignment b)
+              [captured_graph](Assignment a, Assignment b)
     {
         int a_next = a.route.next_intersection(),
             b_next = b.route.next_intersection();
         int a_total = a.route.dist + 
-                        graph->congestion(a.car->intersection_id, a_next),
+                        captured_graph->congestion(a.car->intersection_id, 
+                                                   a_next),
             b_total = b.route.dist + 
-                        graph->congestion(b.car->intersection_id, b_next);
+                        captured_graph->congestion(b.car->intersection_id, 
+                                                   b_next);
         return a_total < b_total;
     });
 
