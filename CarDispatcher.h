@@ -6,17 +6,13 @@
 #include <stdio.h>
 #include <unordered_map>
 #include "TransportationTypes.h"
-#include "SrcDestMap.h"
 #include "Graph.h"
 
 class CarDispatcher
 {
 
 private:
-    SrcDestMap *dist;
-    SrcDestMap *next;
-    std::unordered_map<int, int> car_dest;
-
+    std::unordered_map<int, std::vector<int>> car_route;
     Graph *graph;
 
 public:
@@ -29,7 +25,7 @@ public:
         std::vector<CarCtl> &cars_at_intersections,
         const std::vector<PassengerRequest> &passenger_requests);
 
-    ~CarDispatcher { delete graph; }
+    ~CarDispatcher() { delete graph; }
 };
 
 

@@ -9,62 +9,17 @@ CarDispatcher::CarDispatcher(
 {
     int n = intersections.size();
 
+    // build graph with adjency list
     graph = new Graph(n);
-    for (auto r : roads) {
-        int i = r.src_intersection_id,
-            j = r.dst_intersection_id;
-        graph->update_edge(i, j, r.weight);
-    }
-
-
-    dist = new SrcDestMap(n);
-    next = new SrcDestMap(n);
-    // init dist
-    for (int i = 0; i < n; ++i)
-    {
-        for (int j = 0; j < n; ++j)
-        {
-            if (i == j)
-                (*dist)[i][j] = 0;
-            else
-                (*dist)[i][j] = INT_MAX;
-
-            (*next)[i][j] = -1;
-        }
-    }
-    std::cout << "DIST, NEXT init over." << std::endl;
-
-    /*
-        Compute distance and path-next info.
-    */
-
-    // using Floyd Warshall algorithm
     for (auto r : roads)
     {
-        int i = r.src_intersection_id,
-            j = r.dst_intersection_id;
-        (*dist)[i][j] = r.weight;
-        (*next)[i][j] = j;
+        int src = r.src_intersection_id,
+            dst = r.dst_intersection_id;
+        graph->add_edge(src, dst, r.weight);
     }
-    std::cout << "DIST, NEXT updated by edges." << std::endl;
 
-    // assume all intersections are in the map
-    for (int k = 0; k < n; ++k)
-    {
-        for (int i = 0; i < n; ++i)
-        {
-            for (int j = 0; j < n; ++j)
-            {
-                if ((*dist)[i][k] + (*dist)[k][j] < (*dist)[i][j])
-                {
-                    (*dist)[i][j] = (*dist)[i][k] + (*dist)[k][j];
-                    (*next)[i][j] = (*next)[i][k];
-                }
-            }
-        }
-    }
-    std::cout << "DIST, NEXT updated by Floyd Warshall algorithm."
-              << std::endl;
+    std::cout << "Graph init done." << std::endl;
+
 }
 
 void CarDispatcher::onTurn(
@@ -73,6 +28,10 @@ void CarDispatcher::onTurn(
 {
     printf("car num: %lu, passenger num: %lu\n", cars_at_intersections.size(),
            passenger_requests.size());
+
+    int i;
+    std::cin >> i;
+
     // process loaded cars to next intersection,
     // then remove from the vector
     auto car_iter = cars_at_intersections.begin();
@@ -80,9 +39,9 @@ void CarDispatcher::onTurn(
     {
         if (car_iter->passenger_id != -1)
         {
-            int dest = car_dest[car_iter->car_id];
-            car_iter->intersection_id =
-                (*next)[car_iter->intersection_id][dest];
+            std::vector<int> &path = car_route[car_iter->car_id];
+            car_iter->intersection_id = path.back();
+            path.pop_back();
             cars_at_intersections.erase(car_iter++);
         }
         else
@@ -94,17 +53,24 @@ void CarDispatcher::onTurn(
     // for each passenger, calculate nearest vehicle
     for (auto p : passenger_requests)
     {
-        int min_dist = INT_MAX;
+        Route *best_route;
         CarCtl *nearest_car;
+        int min_dist = INT_MAX;
         for (auto car : cars_at_intersections)
         {
-            int d = (*dist)[car.intersection_id][p.src_intersection_id];
-            if (d < min_dist)
+            Route r = graph->find_route(car.intersection_id,
+                                        p.src_intersection_id);
+            if (r.dist < min_dist)
             {
-                min_dist = d;
+                best_route = &r;
                 nearest_car = &car;
+                min_dist = r.dist;
             }
+            // break if ready to pick up
+            if (!min_dist)
+                break;
         }
+
         // nearest_car is NULL if no cars available
         if (!nearest_car)
         {
@@ -112,18 +78,18 @@ void CarDispatcher::onTurn(
         }
 
         // pick up!
-        if (nearest_car->intersection_id == p.src_intersection_id)
+        if (!min_dist)
         {
             nearest_car->passenger_id = p.passenger_id;
-            car_dest[nearest_car->car_id] = p.dst_intersection_id;
-            nearest_car->intersection_id =
-                (*next)[p.src_intersection_id][p.dst_intersection_id];
+            Route r = graph->find_route(p.src_intersection_id,
+                                        p.dst_intersection_id);
+            nearest_car->intersection_id = r.path.back();
+            r.path.pop_back();
+            car_route[nearest_car->car_id] = r.path;
         }
         else // approach the passenger
         {
-            int next_step =
-                (*next)[nearest_car->intersection_id][p.src_intersection_id];
-            nearest_car->intersection_id = next_step;
+            nearest_car->intersection_id = best_route->path[0];
         }
     }
 }
