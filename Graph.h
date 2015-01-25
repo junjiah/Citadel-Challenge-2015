@@ -49,7 +49,7 @@ struct Assignment
     int passenger_id;
     Route route;
     Assignment(CarCtl *arg_car, int arg_passenger_id, Route arg_route) :
-    car(arg_car), passenger_id(arg_passenger_id), route(arg_route) { }
+        car(arg_car), passenger_id(arg_passenger_id), route(arg_route) { }
 };
 
 struct pairhash {
