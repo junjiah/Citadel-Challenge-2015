@@ -12,7 +12,7 @@ class CarDispatcher
 {
 
 private:
-    std::unordered_map<int, std::vector<int>> car_route;
+    std::unordered_map<int, Route> car_route;
     Graph *graph;
 
 public:
@@ -27,7 +27,5 @@ public:
 
     ~CarDispatcher() { delete graph; }
 };
-
-
 
 #endif

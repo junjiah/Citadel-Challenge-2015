@@ -19,6 +19,9 @@ struct Route
 {
     int dist;
     std::vector<int> path;
+    Route() {
+        dist = INT_MAX;
+    }
     Route(int arg_dist)
         : dist(arg_dist) { }
 };
@@ -79,7 +82,7 @@ public:
             }
             q.erase(q.begin());
             visited[u] = true;
-            for (auto neighbor : graph[u])
+            for (const auto &neighbor : graph[u])
             {
                 int v = neighbor.target;
                 if (!visited[v])
@@ -96,11 +99,33 @@ public:
         }
 
         // construct the path
-        for (; dst != src; dst = prev[dst])
+        for (; dst != -1; dst = prev[dst])
         {
             res.path.push_back(dst);
         }
         return res;
+    }
+
+    int route_advance(Route &r)
+    {
+        int curr = r.path.back();
+        r.path.pop_back();
+        int next = r.path.back();
+
+        auto pred = [next](const Neighbor &i) { return i.target == next; };
+        auto edge = std::find_if(graph[curr].begin(),
+                                 graph[curr].end(),
+                                 pred);
+        if (r.path.size() > 1) 
+        {
+            r.dist -= edge->weight;
+        } else
+        {
+            // will reach destination in the next step,
+            //  reinit dist to infinity
+            r.dist = INT_MAX;
+        }
+        return next;
     }
 };
 
