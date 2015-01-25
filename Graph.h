@@ -5,8 +5,12 @@
 #include <vector>
 #include <set>
 #include <utility>
+#include <unordered_map>
 #include <algorithm>
 
+/**
+ * Vertex in the graph.
+ */
 struct Neighbor
 {
     int target;
@@ -15,22 +19,56 @@ struct Neighbor
         : target(arg_target), weight(arg_weight) { }
 };
 
+/**
+ * Route info containing distance and the path.
+ */
 struct Route
 {
     int dist;
     std::vector<int> path;
+
     Route() {
         dist = INT_MAX;
     }
+
     Route(int arg_dist)
         : dist(arg_dist) { }
+
+    int next_intersection() {
+        return path[path.size()-2];
+    }        
 };
+
+/**
+ * Assignment of cars targeting specific passengers,
+ * with route information.
+ */
+struct Assignment
+{
+    CarCtl *car;
+    int passenger_id;
+    Route route;
+    Assignment(CarCtl *arg_car, int arg_passenger_id, Route arg_route) :
+    car(arg_car), passenger_id(arg_passenger_id), route(arg_route) { }
+};
+
+struct pairhash {
+public:
+    template <typename T, typename U>
+    std::size_t operator()(const std::pair<T, U> &x) const
+    {
+        return std::hash<T>()(x.first) ^ std::hash<U>()(x.second);
+    }
+};
+
+typedef std::pair<int, int> src_dst;
 
 class Graph
 {
 
 private:
     std::vector<std::vector<Neighbor> > graph;
+    std::unordered_map<src_dst, int, pairhash> cars_on_road;
     int n;
 
 public:
@@ -130,7 +168,44 @@ public:
             //  reinitialize dist to infinity
             r.dist = INT_MAX;
         }
+        // cars on the way, record into congestion map
+        cars_on_road[src_dst(curr, next)] += 1;
         return next;
+    }
+
+    /**
+     * Find how many cars on the road src->dst
+     * @param  src source of the road
+     * @param  dst destination of the road
+     * @return     car number on the road
+     */
+    int congestion(int src, int dst)
+    {
+        static src_dst road_prob;
+        road_prob.first = src;
+        road_prob.second = dst;
+
+        auto search_result = cars_on_road.find(road_prob);
+        if (search_result != cars_on_road.end())
+            return search_result->second;
+        else 
+            return 0;
+    }
+
+    /**
+     * Reduce car number on the corresponding road.
+     * @param i one car's intersection number
+     */
+    void car_arrived(int i) 
+    {
+        for (auto&& kv : cars_on_road) 
+        {
+            if (kv.first.second == i) 
+            {
+                kv.second -= 1;
+                return;
+            }
+        }
     }
 };
 
